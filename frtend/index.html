@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload Excel File</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin-top: 50px;
+      text-align: center;
+      background-color: #f8f9fa;
+    }
+    .container {
+      width: 50%;
+      margin: auto;
+      padding: 20px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #4caf50;
+    }
+    input[type='file'], select, button {
+      margin-top: 15px;
+      padding: 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease-in-out;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #message {
+      margin-top: 20px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      display: none;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    #progressContainer {
+      width: 50%;
+      margin: 20px auto;
+      text-align: left;
+    }
+    #progressBar {
+      width: 100%;
+      background-color: #f3f3f3;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      overflow: hidden;
+      height: 20px;
+    }
+    #progress {
+      height: 100%;
+      width: 0%;
+      background-color: #4caf50;
+      transition: width 0.3s ease-in-out;
+    }
+    #progressPercentage {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #4caf50;
+    }
+    #loading {
+      display: none;
+      margin-top: 20px;
+    }
+    #resetButton {
+      display: none;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #resetButton:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 Upload Excel File to SQL Database</h2>
+
+    <!-- Dropdown for Table Selection -->
+    <label for="table">Choose a Table:</label>
+    <select id="table" name="table">
+      <option value="[Resolved BPEM]">Resolved BPEM</option>
+      <option value="[Outstanding BPEM]">Pending BPEM</option>
+    </select>
+
+    <!-- File Upload Section -->
+    <input type="file" id="file" />
+    <button id="uploadButton" onclick="uploadFile()">📤 Upload File</button>
+
+    <!-- Loading Spinner -->
+    <div id="loading">
+      ⏳ Uploading... Please wait!
+    </div>
+
+    <!-- Progress Bar with Percentage -->
+    <div id="progressContainer">
+      <div id="progressBar">
+        <div id="progress"></div>
+      </div>
+      <div id="progressPercentage">0%</div>
+    </div>
+
+    <!-- Success/Error Message Display -->
+    <div id="message"></div>
+
+    <!-- Reset Fields Button -->
+    <button id="resetButton" onclick="resetForm()">🔄 Upload Another File</button>
+  </div>
+
+  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById('file');
+      const tableInput = document.getElementById('table');
+      const uploadButton = document.getElementById('uploadButton');
+      const loading = document.getElementById('loading');
+      const resetButton = document.getElementById('resetButton');
+      const progressBar = document.getElementById('progress');
+      const progressText = document.getElementById('progressPercentage');
+      const file = fileInput.files[0];
+      const tableName = tableInput.value;
+
+      // ✅ Check if file is selected
+      if (!file) {
+        showMessage('❌ Please select a file!', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tableName', tableName);
+
+      try {
+        // Show Loading Spinner and Disable Button
+        loading.style.display = 'block';
+        uploadButton.disabled = true;
+        resetButton.style.display = 'none';
+
+        // ✅ Start Progress Bar
+        updateProgress(10);
+
+        const response = await fetch('http://localhost:3000/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.text();
+
+        if (response.ok) {
+          // ✅ Complete Progress
+          updateProgress(100);
+
+          // ✅ Show success message and popup after 1 sec
+          setTimeout(() => {
+            showMessage(`✅ ${result}`, 'success');
+            showPopup(`🎉 Success: ${result}`);
+          }, 1000);
+
+          // ✅ Show "Upload Another File" button
+          setTimeout(() => {
+            resetButton.style.display = 'block';
+          }, 1500);
+        } else {
+          showMessage(`❌ Error: ${result}`, 'error');
+        }
+      } catch (error) {
+        showMessage(`❌ Error uploading file: ${error.message}`, 'error');
+      } finally {
+        // Hide Loading and Enable Upload Button Again
+        loading.style.display = 'none';
+        uploadButton.disabled = false;
+      }
+    }
+
+    // ✅ Function to show message dynamically
+    function showMessage(msg, type) {
+      const messageBox = document.getElementById('message');
+      messageBox.innerText = msg;
+      messageBox.className = type;
+      messageBox.style.display = 'block';
+
+      // Hide message after 5 seconds for errors
+      if (type !== 'success') {
+        setTimeout(() => {
+          messageBox.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    // ✅ Show success popup dynamically
+    function showPopup(msg) {
+      alert(msg);
+    }
+
+    // ✅ Update progress bar dynamically
+    function updateProgress(value) {
+      const progressBar = document.getElementById('progress');
+      const progressText = document.getElementById('progressPercentage');
+
+      progressBar.style.width = value + '%';
+      progressText.innerText = `${value}%`;
+
+      if (value === 100) {
+        setTimeout(() => {
+          showMessage('🎉 File uploaded successfully!', 'success');
+        }, 500);
+      }
+    }
+
+    // ✅ Reset form to upload another file without refreshing the page
+    function resetForm() {
+      document.getElementById('file').value = '';
+      document.getElementById('table').selectedIndex = 0;
+      updateProgress(0);
+      document.getElementById('message').style.display = 'none';
+      document.getElementById('resetButton').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
